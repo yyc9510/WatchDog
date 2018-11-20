@@ -8,26 +8,66 @@
 
 import UIKit
 import CoreData
+import Firebase
+import IQKeyboardManagerSwift
+import UserNotifications
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 
     var window: UIWindow?
-
-
+    var backgroundTask:UIBackgroundTaskIdentifier! = nil
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        
+        FirebaseApp.configure()
+        IQKeyboardManager.shared.enable = true
+        
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound]) { (granted, error) in
+            // Enable or disable features based on authorization.
+            if error != nil {
+                print("Request authorization failed!")
+            } else {
+                print("Request authorization succeeded!")
+          
+            }
+        }
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
         return true
+    }
+    
+    // display notification foreground
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.alert,.sound])
+    }
+    
+    //response to user notification
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        if response.notification.request.identifier == "testidentifier"
+        {
+            print("**** handling notification ****")
+        }
+        completionHandler()
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
         // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
         // Use this method to pause ongoing tasks, disable timers, and invalidate graphics rendering callbacks. Games should use this method to pause the game.
     }
-
+    
+    // set the remain background task to invalid when the application did enter background
     func applicationDidEnterBackground(_ application: UIApplication) {
-        // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
-        // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
+        
+        if self.backgroundTask != nil {
+            application.endBackgroundTask(self.backgroundTask)
+            self.backgroundTask = UIBackgroundTaskIdentifier.invalid
+        }
+        
+        self.backgroundTask = application.beginBackgroundTask(expirationHandler: ({ () -> Void in
+            application.endBackgroundTask(self.backgroundTask)
+            self.backgroundTask = UIBackgroundTaskIdentifier.invalid
+        }))
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
